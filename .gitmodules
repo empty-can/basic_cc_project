@@ -1,0 +1,4 @@
+[submodule ".claude"]
+	path = .claude
+	url = https://github.com/empty-can/basic_dot_claude.git
+	branch = main
