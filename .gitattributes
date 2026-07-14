@@ -1,0 +1,40 @@
+# =============================================================================
+# .gitattributes ― 改行コードを固定し、clone 環境差で起動装置が壊れるのを防ぐ
+# =============================================================================
+# これが無いと core.autocrlf=true（Git for Windows の既定）の clone で
+# start_claude_code.sh が CRLF 化し、`set -euo pipefail` 下で bash が $'\r' により
+# 起動に失敗する。起動装置が壊れると、このひな型は「使い始められない」状態になる。
+#
+# ⚠ 指定は「拡張子ベース」で書くこと。パスを列挙する方式は、後から増えたファイルが
+#    保護対象から漏れ、Windows clone で壊れる（指定漏れという形での再発芽）。
+#
+# ⚠ 本ファイルは `.claude/` には効かない。`.claude/` は別リポジトリ（basic_dot_claude）の
+#    submodule であり、submodule 内のチェックアウトは**その submodule 自身の
+#    .gitattributes**（basic_dot_claude のルートにある）に従う。親リポジトリの属性は
+#    submodule の中へは届かない。`.claude/` 配下の改行方針を変えるときは供給元
+#    （base-dev-kit-for-cc の `.claude/.gitattributes`）を直し、publish し直すこと。
+#
+# ⚠ `text` ではなく `text=auto` を使う。`text`（強制）は Git のバイナリ検出を無効化するため、
+#    人が PowerShell 5.1 の `Out-File`（既定 UTF-16LE）で作った .ps1 をコミットすると、
+#    checkout 時に LF→CRLF 変換が UTF-16 のバイト列（0a 00）に食い込んで**不可逆に壊れる**。
+#    text=auto なら UTF-16 はバイナリ判定で不変、UTF-8(+BOM) は CRLF へ正規化される。
+# =============================================================================
+
+# 既定は LF。CRLF が要るものだけを後勝ちの例外にする。
+* text=auto eol=lf
+
+# --- PowerShell が読むファイル: UTF-8 BOM + CRLF ---
+# BOM は Git が触らずコンテンツとして保持される。Windows PowerShell 5.1 は BOM 無し
+# UTF-8 を CP932 と誤読するため、BOM を落とすと日本語が化ける（PowerShell 7 は既定
+# UTF-8 なので、5.1 と 7 の両方で読める形式は UTF-8 + BOM だけ）。
+*.ps1          text=auto eol=crlf
+*.psm1         text=auto eol=crlf
+*.psd1         text=auto eol=crlf
+*.ps1.template text=auto eol=crlf
+
+# --- cmd.exe が読むファイル: CP932 + CRLF・BOM なし ---
+# cmd.exe は BOM を読み飛ばさず 1 行目を壊すため、.bat に BOM を付けてはならない。
+# 中身の文字コードは Git では表現できないため、`.claude/rules/win-file-encoding.md` と
+# `.claude/hooks/bat_cp932_guard.py` が担保する。`.cmd` は使用禁止（`.bat` に一本化）。
+*.bat text=auto eol=crlf
+*.cmd text=auto eol=crlf
